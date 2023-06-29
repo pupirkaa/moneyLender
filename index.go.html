@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title>Transactions</title>
+	</head>
+	<body>
+		<a href ="/login"> Exit</a>
+		<form action="/transaction" method="post">
+			<lable for="lender">Lender</lable><br>
+			<input type="text" id="lender" name="lender" required ><br>
+			<lable for="lendee">Lendee</lable><br>
+			<input type="text" id="lendee" name="lendee" required><br>
+			<lable for="money">Money</lable><br>
+			<input type="number" id="money" name="money" required min="1"><br>
+			<input type="submit" value="Submit">
+		</form>
+
+		<table>
+			<tr>
+				<th>From</th>
+				<th>To</th>
+				<th>Amount</th>
+			</tr>
+			{{range .Transactions}}
+			<tr>
+				<td>{{.Lender}} </td>
+				<td>{{.Lendee}}</td>
+				<td>{{.Money}}</td>
+			</tr>
+			{{end}}
+		</table>
+		
+		<table>
+			<tr>
+				<th>Name</th>
+				<th>Debt</th>
+			</tr>
+			{{range .Debts}}
+			<tr>
+				<td>{{.Name}} </td>
+				<td>{{.Money}}</td>
+			</tr>
+			{{end}}
+		</table>
+		
+
+	</body>
+
+</html>
