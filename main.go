@@ -5,14 +5,19 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
 	"sort"
 	"strings"
 	"time"
+
+	"main.go/fs"
+	"main.go/inmem"
 )
 
 //go:embed index.go.html
@@ -27,7 +32,6 @@ var htmlTemplateSignup string
 func syncDataPeriodically(t TxsController) {
 	time.Sleep(5 * time.Minute)
 	t.saveTxsToFile()
-	t.saveUsersToFile()
 	go syncDataPeriodically(t)
 }
 
@@ -49,7 +53,7 @@ func serveHttp(exitCh <-chan os.Signal, txc TxsController) {
 
 		fmt.Println("Выключаемся :(")
 		txc.saveTxsToFile()
-		txc.saveUsersToFile()
+		txc.users.Close()
 		srv.Shutdown(context.TODO())
 	}()
 
@@ -123,18 +127,38 @@ func getResult(m map[string]int) []Debt {
 	return debts
 }
 
+type usersStorage interface {
+	io.Closer
+	UserExist(name string) bool
+	UserAdd(name string, password string)
+	UserGet(name string) string
+}
+
 func main() {
+	var (
+		usersFlag = flag.String("users", "", "path to file for user storage")
+		//txsFlag   = flag.String("txs", "", "path to file for transactions storage")
+	)
+	flag.Parse()
+
+	var users usersStorage
+	if *usersFlag == "" {
+		users = inmem.NewUserStorage()
+		fmt.Println("-users flag not provided, falling back to in memory storage")
+	} else {
+		users = fs.NewUserStorage(*usersFlag)
+	}
+
 	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt)
 
-	transactions, debts := parseTransactions(readFile(os.Args[1]))
+	transactions, debts := parseTransactions(readFile(flag.Arg(0)))
 
 	txc := TxsController{
-		txs:      transactions,
-		users:    parseUsers(readFile("fixtures/users")),
-		newUsers: make(map[string]string),
-		debts:    getResult(debts),
-		t:        parseTemplate(),
+		txs:   transactions,
+		debts: getResult(debts),
+		t:     parseTemplate(),
+		users: users,
 	}
 
 	serveHttp(exitCh, txc)

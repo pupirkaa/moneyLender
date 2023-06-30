@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -27,12 +28,11 @@ type Debt struct {
 }
 
 type TxsController struct {
-	txs      []Transaction
-	newTxs   []Transaction
-	users    map[string]string
-	newUsers map[string]string
-	debts    []Debt
-	t        *template.Template
+	txs    []Transaction
+	newTxs []Transaction
+	debts  []Debt
+	t      *template.Template
+	users  usersStorage
 }
 
 func (t *TxsController) index(w http.ResponseWriter, req *http.Request) {
@@ -66,8 +66,8 @@ func (t *TxsController) addTransaction(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	_, lenderExist := t.users[lender]
-	_, lendeeExist := t.users[lendee]
+	lenderExist := t.users.UserExist(lender)
+	lendeeExist := t.users.UserExist(lendee)
 	if !lenderExist || !lendeeExist {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintln(w, "User not found")
@@ -76,14 +76,26 @@ func (t *TxsController) addTransaction(w http.ResponseWriter, req *http.Request)
 
 	nT := Transaction{Lender: lender, Lendee: lendee, Money: money}
 
+	foundLender := false
+	foundLendee := false
+
 	for i := range t.debts {
 		if lender == t.debts[i].Name {
 			t.debts[i].Money += money
+			foundLender = true
 		}
 		if lendee == t.debts[i].Name {
 			t.debts[i].Money -= money
+			foundLendee = true
 		}
 	}
+	if !foundLender {
+		t.debts = append(t.debts, Debt{Name: lender, Money: money})
+	}
+	if !foundLendee {
+		t.debts = append(t.debts, Debt{Name: lender, Money: -money})
+	}
+
 	t.txs = append(t.txs, nT)
 	t.newTxs = append(t.newTxs, nT)
 	http.Redirect(w, req, "/", http.StatusSeeOther)
@@ -91,6 +103,7 @@ func (t *TxsController) addTransaction(w http.ResponseWriter, req *http.Request)
 }
 
 func parseTransactions(transactionData []string) ([]Transaction, map[string]int) {
+
 	debts := map[string]int{}
 	var transactions []Transaction
 
@@ -124,7 +137,7 @@ func parseTransactions(transactionData []string) ([]Transaction, map[string]int)
 }
 
 func (t *TxsController) saveTxsToFile() {
-	f, err := os.OpenFile(os.Args[1], os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	f, err := os.OpenFile(flag.Arg(0), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to open file: %v", err)
 		os.Exit(1)
