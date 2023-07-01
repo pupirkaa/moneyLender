@@ -1,13 +1,20 @@
-package main
+package ml
 
 import (
+	_ "embed"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 )
 
-func (t *TxsController) login(w http.ResponseWriter, req *http.Request) {
+//go:embed login.go.html
+var htmlTemplateLogin string
+
+//go:embed signup.go.html
+var htmlTemplateSignup string
+
+func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to parse form: %v", err)
@@ -39,13 +46,13 @@ func (t *TxsController) login(w http.ResponseWriter, req *http.Request) {
 			password = form.Get("password")
 		)
 
-		if !t.users.UserExist(name) {
+		if !t.Users.UserExist(name) {
 			io.WriteString(w, htmlTemplateLogin)
 			io.WriteString(w, "can't find a user")
 			return
 		}
 
-		if t.users.UserGet(name) != password {
+		if t.Users.UserGet(name) != password {
 			io.WriteString(w, htmlTemplateLogin)
 			io.WriteString(w, "incorrect password")
 			return
@@ -57,7 +64,7 @@ func (t *TxsController) login(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func (t *TxsController) signup(w http.ResponseWriter, req *http.Request) {
+func (t *TxsController) Signup(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, htmlTemplateSignup)
 
 	err := req.ParseForm()
@@ -72,6 +79,6 @@ func (t *TxsController) signup(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodPost {
 		form := req.Form
 
-		t.users.UserAdd(form.Get("name"), form.Get("password"))
+		t.Users.UserAdd(form.Get("name"), form.Get("password"))
 	}
 }
