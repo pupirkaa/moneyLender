@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Distributed debts</title>
+	</head>
+	<body>
+		<a href ="/"> Back to transactions</a>
+		<table>
+			<tr>
+				<th>From</th>
+				<th>To</th>
+				<th>Amount</th>
+			</tr>
+			{{range .Transactions}}
+			<tr>
+				<td>{{.Lender}} </td>
+				<td>{{.Lendee}}</td>
+				<td>{{.Money}}</td>
+			</tr>
+			{{end}}
+		</table>
+	</body>
+</html>

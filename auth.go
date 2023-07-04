@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 )
 
 //go:embed login.go.html
@@ -65,7 +66,10 @@ func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 }
 
 func (t *TxsController) Signup(w http.ResponseWriter, req *http.Request) {
-	io.WriteString(w, htmlTemplateSignup)
+	if req.Method == http.MethodGet {
+		io.WriteString(w, htmlTemplateSignup)
+		return
+	}
 
 	err := req.ParseForm()
 	if err != nil {
@@ -78,7 +82,22 @@ func (t *TxsController) Signup(w http.ResponseWriter, req *http.Request) {
 
 	if req.Method == http.MethodPost {
 		form := req.Form
-
-		t.Users.UserAdd(form.Get("name"), form.Get("password"))
+		name := form.Get("name")
+		password := form.Get("password")
+		if !isNameCorrect(name) || !isPasswordCorrect(password) {
+			io.WriteString(w, htmlTemplateSignup)
+			io.WriteString(w, "wrong name or password")
+			return
+		}
+		t.Users.UserAdd(name, password)
+		http.Redirect(w, req, "/login", http.StatusSeeOther)
 	}
+}
+
+func isNameCorrect(name string) bool {
+	return !regexp.MustCompile(`\s`).MatchString(name)
+}
+
+func isPasswordCorrect(password string) bool {
+	return (!regexp.MustCompile(`\s`).MatchString(password) || len(password) < 4)
 }

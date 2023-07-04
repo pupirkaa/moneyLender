@@ -23,6 +23,7 @@ func serveHttp(exitCh <-chan os.Signal, txc ml.TxsController) {
 
 	mux.HandleFunc("/", txc.Index)
 	mux.HandleFunc("/transaction", txc.AddTransaction)
+	mux.HandleFunc("/distributedDebts", txc.DistributedDebts)
 
 	srv := &http.Server{Addr: "0.0.0.0:80", Handler: mux}
 
@@ -73,6 +74,8 @@ func main() {
 		Txs:   txs,
 		Users: users,
 	}
+
+	fmt.Println(txc.DistributeDebts())
 
 	serveHttp(exitCh, txc)
 }

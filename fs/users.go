@@ -23,7 +23,7 @@ func NewUserStorage(path string) (usf UserFileStorage) {
 	usf.exitCh = make(chan bool)
 	usf.syncDoneCh = make(chan bool)
 	go func() {
-		t := time.NewTicker(5 * time.Second)
+		t := time.NewTicker(1 * time.Minute)
 		for {
 			select {
 			case <-usf.exitCh:
