@@ -81,8 +81,9 @@ func main() {
 	signal.Notify(exitCh, os.Interrupt)
 
 	txc := ml.TxsController{
-		Txs:   txs,
-		Users: users,
+		Txs:     txs,
+		Users:   users,
+		Cookies: map[string]bool{},
 	}
 
 	serveHttp(exitCh, txc)

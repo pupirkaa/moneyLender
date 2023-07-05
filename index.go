@@ -32,11 +32,16 @@ var htmlTemplateMain string
 var htmlTemplateDebts string
 
 func (t *TxsController) Index(w http.ResponseWriter, req *http.Request) {
-	_, err := req.Cookie("user")
+	cookie, err := req.Cookie("user")
 	if err != nil {
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 		return
 	}
+	if _, ok := t.Cookies[cookie.Value]; !ok {
+		http.Redirect(w, req, "/login", http.StatusSeeOther)
+		return
+	}
+
 	txs, _ := t.Txs.TxsGet()
 	debts, _ := t.Txs.DebtsGet()
 	io.WriteString(w, generateHTML(txs, debts, parseTemplate(htmlTemplateMain)))
@@ -68,6 +73,10 @@ func parseTemplate(s string) *template.Template {
 		panic(err)
 	}
 	return t
+}
+
+func RunCookieStorage() map[string]bool {
+	return map[string]bool{}
 }
 
 func (t TxsController) DistributeDebts() []Transaction {

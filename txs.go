@@ -24,8 +24,9 @@ type Debt struct {
 }
 
 type TxsController struct {
-	Txs   TxsStorage
-	Users UsersStorage
+	Txs     TxsStorage
+	Users   UsersStorage
+	Cookies map[string]bool
 }
 
 func (t *TxsController) AddTransaction(w http.ResponseWriter, req *http.Request) {

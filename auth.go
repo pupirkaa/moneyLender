@@ -2,11 +2,13 @@ package ml
 
 import (
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 )
 
 //go:embed login.go.html
@@ -31,16 +33,6 @@ func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.Method == http.MethodPost {
-		cookie := http.Cookie{
-			Name:  "user",
-			Value: "",
-		}
-		http.SetCookie(w, &cookie)
-		err := cookie.Valid()
-		if err != nil {
-			fmt.Println("cookie is not valid ", err)
-		}
-
 		form := req.Form
 		var (
 			name     = form.Get("name")
@@ -68,6 +60,8 @@ func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 			io.WriteString(w, "incorrect password")
 			return
 		}
+
+		t.setCookie(&w, name, password)
 
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
@@ -110,4 +104,18 @@ func isNameCorrect(name string) bool {
 
 func isPasswordCorrect(password string) bool {
 	return (!regexp.MustCompile(`\s`).MatchString(password) || len(password) < 4)
+}
+
+func (t *TxsController) setCookie(w *http.ResponseWriter, name string, password string) {
+	cookieValue := hex.EncodeToString([]byte(name + password + time.Now().GoString()))
+	cookie := http.Cookie{
+		Name:  "user",
+		Value: cookieValue,
+	}
+	t.Cookies[cookieValue] = true
+	http.SetCookie(*w, &cookie)
+
+	if err := cookie.Valid(); err != nil {
+		fmt.Println("cookie is not valid ", err)
+	}
 }
