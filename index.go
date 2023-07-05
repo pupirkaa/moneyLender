@@ -13,16 +13,16 @@ import (
 
 type UsersStorage interface {
 	io.Closer
-	UserExist(name string) bool
-	UserAdd(name string, password string)
-	UserGet(name string) string
+	UserExist(name string) (bool, error)
+	UserAdd(name string, password string) error
+	UserGet(name string) (string, error)
 }
 
 type TxsStorage interface {
 	io.Closer
-	TransactionAdd(lender string, lendee string, money int)
-	DebtsGet() []Debt
-	TxsGet() []Transaction
+	TransactionAdd(lender string, lendee string, money int) error
+	DebtsGet() ([]Debt, error)
+	TxsGet() ([]Transaction, error)
 }
 
 //go:embed index.go.html
@@ -37,7 +37,9 @@ func (t *TxsController) Index(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 		return
 	}
-	io.WriteString(w, generateHTML(t.Txs.TxsGet(), t.Txs.DebtsGet(), parseTemplate(htmlTemplateMain)))
+	txs, _ := t.Txs.TxsGet()
+	debts, _ := t.Txs.DebtsGet()
+	io.WriteString(w, generateHTML(txs, debts, parseTemplate(htmlTemplateMain)))
 }
 
 func (t *TxsController) DistributedDebts(w http.ResponseWriter, req *http.Request) {
@@ -70,7 +72,7 @@ func parseTemplate(s string) *template.Template {
 
 func (t TxsController) DistributeDebts() []Transaction {
 	txs := []Transaction{}
-	debts := t.Txs.DebtsGet()
+	debts, _ := t.Txs.DebtsGet()
 	posDebts := []Debt{}
 	negDebts := []Debt{}
 
@@ -106,7 +108,6 @@ func (t TxsController) DistributeDebts() []Transaction {
 			k += 1
 			i += 1
 		}
-		fmt.Println("+", posDebts, " -", negDebts)
 	}
 
 	return txs

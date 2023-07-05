@@ -47,13 +47,23 @@ func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 			password = form.Get("password")
 		)
 
-		if !t.Users.UserExist(name) {
+		exists, err := t.Users.UserExist(name)
+		if err != nil {
+			panic("TODO: handle error")
+		}
+
+		if !exists {
 			io.WriteString(w, htmlTemplateLogin)
 			io.WriteString(w, "can't find a user")
 			return
 		}
 
-		if t.Users.UserGet(name) != password {
+		pass, err := t.Users.UserGet(name)
+		if err != nil {
+			panic("TODO: handle error")
+		}
+
+		if pass != password {
 			io.WriteString(w, htmlTemplateLogin)
 			io.WriteString(w, "incorrect password")
 			return

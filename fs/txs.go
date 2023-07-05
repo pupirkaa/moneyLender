@@ -48,18 +48,19 @@ func NewTxsStorage(path string) (tfs *TxsFileStorage) {
 	return tfs
 }
 
-func (tfs TxsFileStorage) DebtsGet() []ml.Debt {
-	return tfs.sortedDebts
+func (tfs TxsFileStorage) DebtsGet() ([]ml.Debt, error) {
+	return tfs.sortedDebts, nil
 }
 
-func (tfs TxsFileStorage) TxsGet() []ml.Transaction {
-	return tfs.txs
+func (tfs TxsFileStorage) TxsGet() ([]ml.Transaction, error) {
+	return tfs.txs, nil
 }
 
-func (tfs *TxsFileStorage) TransactionAdd(lender string, lendee string, money int) {
+func (tfs *TxsFileStorage) TransactionAdd(lender string, lendee string, money int) error {
 	tfs.txs = append(tfs.txs, ml.Transaction{Lender: lender, Lendee: lendee, Money: money})
 	tfs.newTxs = append(tfs.newTxs, ml.Transaction{Lender: lender, Lendee: lendee, Money: money})
 	tfs.debtAdd(lender, lendee, money)
+	return nil
 }
 
 func (tfs *TxsFileStorage) debtAdd(lender string, lendee string, money int) {

@@ -50,8 +50,16 @@ func (t *TxsController) AddTransaction(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	lenderExist := t.Users.UserExist(lender)
-	lendeeExist := t.Users.UserExist(lendee)
+	lenderExist, err := t.Users.UserExist(lender)
+	if err != nil {
+		panic("TODO: handle error")
+	}
+
+	lendeeExist, err := t.Users.UserExist(lendee)
+	if err != nil {
+		panic("TODO: handle error")
+	}
+
 	if !lenderExist || !lendeeExist {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintln(w, "User not found")

@@ -9,10 +9,10 @@ type mock struct {
 	debts []Debt
 }
 
-func (m mock) Close() (e error)                                       { return nil }
-func (m mock) TransactionAdd(lender string, lendee string, money int) {}
-func (m mock) DebtsGet() (d []Debt)                                   { return m.debts }
-func (m mock) TxsGet() (t []Transaction)                              { return nil }
+func (m mock) Close() (e error)                                             { return nil }
+func (m mock) TransactionAdd(lender string, lendee string, money int) error { return nil }
+func (m mock) DebtsGet() (d []Debt, err error)                              { return m.debts, nil }
+func (m mock) TxsGet() (t []Transaction, err error)                         { return nil, nil }
 
 func TestTxsController_DistributeDebts(t *testing.T) {
 	type fields struct {

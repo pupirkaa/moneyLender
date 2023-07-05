@@ -45,18 +45,19 @@ func (usf UserFileStorage) Close() error {
 	return nil
 }
 
-func (usf UserFileStorage) UserExist(name string) bool {
+func (usf UserFileStorage) UserExist(name string) (bool, error) {
 	_, ok := usf.users[name]
-	return ok
+	return ok, nil
 }
 
-func (usf UserFileStorage) UserAdd(name string, password string) {
+func (usf UserFileStorage) UserAdd(name string, password string) error {
 	usf.users[name] = password
 	usf.newUsers[name] = password
+	return nil
 }
 
-func (usf UserFileStorage) UserGet(name string) string {
-	return usf.users[name]
+func (usf UserFileStorage) UserGet(name string) (string, error) {
+	return usf.users[name], nil
 }
 
 func (usf UserFileStorage) SaveUsersToFile() {

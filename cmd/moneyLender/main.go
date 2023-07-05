@@ -6,13 +6,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	ml "main.go"
 	"main.go/fs"
 	"main.go/inmem"
+	"main.go/sqlite"
 )
 
 func serveHttp(exitCh <-chan os.Signal, txc ml.TxsController) {
@@ -45,26 +48,33 @@ func serveHttp(exitCh <-chan os.Signal, txc ml.TxsController) {
 }
 
 func main() {
+	mime.AddExtensionType(".db", mimetypeSqlite)
+	_ = mime.TypeByExtension(filepath.Ext(""))
+
 	var (
-		usersFlag = flag.String("users", "", "path to file for user storage")
-		txsFlag   = flag.String("txs", "", "path to file for transactions storage")
+		storageFlag = flag.String("storage", "", "kind of storage")
+		sqliteFlag  = flag.String("sqlite", "", "path to file for db storage")
+		usersFlag   = flag.String("users", "", "path to file for user storage")
+		txsFlag     = flag.String("txs", "", "path to file for transactions storage")
 	)
 	flag.Parse()
 
-	var users ml.UsersStorage
-	if *usersFlag == "" {
-		users = inmem.NewUserStorage()
-		fmt.Println("-users flag not provided, falling back to in memory storage")
-	} else {
-		users = fs.NewUserStorage(*usersFlag)
-	}
+	var (
+		users ml.UsersStorage
+		txs   ml.TxsStorage
+	)
 
-	var txs ml.TxsStorage
-	if *txsFlag == "" {
+	switch *storageFlag {
+	case "inmem":
+		users = inmem.NewUserStorage()
 		txs = inmem.NewTxsStorage()
-		fmt.Println("-txs flag not provided, falling back to in memory storage")
-	} else {
+	case "fs":
+		users = fs.NewUserStorage(*usersFlag)
 		txs = fs.NewTxsStorage(*txsFlag)
+	case "sqlite":
+		users = sqlite.NewUserStorage(*sqliteFlag)
+		txs = sqlite.NewTxsStorage(*sqliteFlag)
+
 	}
 
 	exitCh := make(chan os.Signal, 1)
@@ -75,7 +85,9 @@ func main() {
 		Users: users,
 	}
 
-	fmt.Println(txc.DistributeDebts())
-
 	serveHttp(exitCh, txc)
 }
+
+const (
+	mimetypeSqlite = "application/vnd.sqlite3"
+)

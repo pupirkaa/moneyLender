@@ -25,19 +25,20 @@ func (tfs TxsStorage) Close() error {
 	return nil
 }
 
-func (tfs *TxsStorage) TransactionAdd(lender string, lendee string, money int) {
+func (tfs *TxsStorage) TransactionAdd(lender string, lendee string, money int) error {
 	tfs.txs = append(tfs.txs, ml.Transaction{Lender: lender, Lendee: lendee, Money: money})
 	tfs.debts[lender] += money
 	tfs.debts[lendee] -= money
 	tfs.sortedDebts = sortDebts(tfs.debts)
+	return nil
 }
 
-func (tfs *TxsStorage) DebtsGet() []ml.Debt {
-	return tfs.sortedDebts
+func (tfs *TxsStorage) DebtsGet() ([]ml.Debt, error) {
+	return tfs.sortedDebts, nil
 }
 
-func (tfs *TxsStorage) TxsGet() []ml.Transaction {
-	return tfs.txs
+func (tfs *TxsStorage) TxsGet() ([]ml.Transaction, error) {
+	return tfs.txs, nil
 }
 
 func sortDebts(d map[string]int) []ml.Debt {
