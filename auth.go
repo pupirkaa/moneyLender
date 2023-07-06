@@ -9,6 +9,8 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 //go:embed login.go.html
@@ -50,18 +52,18 @@ func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		pass, err := t.Users.UserGet(name)
+		hashedPassword, err := t.Users.UserGet(name)
 		if err != nil {
 			panic("TODO: handle error")
 		}
 
-		if pass != password {
+		if !comparaPasswords(hashedPassword, password) {
 			io.WriteString(w, htmlTemplateLogin)
 			io.WriteString(w, "incorrect password")
 			return
 		}
 
-		t.setCookie(&w, name, password)
+		t.setCookie(&w, name, hashedPassword)
 
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
@@ -88,22 +90,39 @@ func (t *TxsController) Signup(w http.ResponseWriter, req *http.Request) {
 		form := req.Form
 		name := form.Get("name")
 		password := form.Get("password")
-		if !isNameCorrect(name) || !isPasswordCorrect(password) {
+		if !isNameValid(name) || !isPasswordValid(password) {
 			io.WriteString(w, htmlTemplateSignup)
 			io.WriteString(w, "wrong name or password")
 			return
 		}
-		t.Users.UserAdd(name, password)
+		t.Users.UserAdd(name, HashAndSalt(password))
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 	}
 }
 
-func isNameCorrect(name string) bool {
+func isNameValid(name string) bool {
 	return !regexp.MustCompile(`\s`).MatchString(name)
 }
 
-func isPasswordCorrect(password string) bool {
+func isPasswordValid(password string) bool {
 	return (!regexp.MustCompile(`\s`).MatchString(password) || len(password) < 4)
+}
+
+func HashAndSalt(password string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		fmt.Println("hashing password: ", err)
+	}
+	return string(hash)
+}
+
+func comparaPasswords(hashedPassword string, plainPassword string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
+	if err != nil {
+		fmt.Println("comparing passwords: ", err)
+		return false
+	}
+	return true
 }
 
 func (t *TxsController) setCookie(w *http.ResponseWriter, name string, password string) {
