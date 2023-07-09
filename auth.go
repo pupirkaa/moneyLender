@@ -3,138 +3,84 @@ package ml
 import (
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
 	"regexp"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-//go:embed login.go.html
-var htmlTemplateLogin string
-
-//go:embed signup.go.html
-var htmlTemplateSignup string
-
-func (t *TxsController) Login(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse form: %v", err)
-
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "bad form")
-		return
-	}
-
-	if req.Method == http.MethodGet {
-		io.WriteString(w, htmlTemplateLogin)
-		return
-	}
-
-	if req.Method == http.MethodPost {
-		form := req.Form
-		var (
-			name     = form.Get("name")
-			password = form.Get("password")
-		)
-
-		exists, err := t.Users.UserExist(name)
-		if err != nil {
-			panic("TODO: handle error")
-		}
-
-		if !exists {
-			io.WriteString(w, htmlTemplateLogin)
-			io.WriteString(w, "can't find a user")
-			return
-		}
-
-		hashedPassword, err := t.Users.UserGet(name)
-		if err != nil {
-			panic("TODO: handle error")
-		}
-
-		if !comparaPasswords(hashedPassword, password) {
-			io.WriteString(w, htmlTemplateLogin)
-			io.WriteString(w, "incorrect password")
-			return
-		}
-
-		t.setCookie(&w, name, hashedPassword)
-
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
-	}
-
+type AuthService struct {
+	Users UsersStorage
 }
 
-func (t *TxsController) Signup(w http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodGet {
-		io.WriteString(w, htmlTemplateSignup)
-		return
-	}
+var (
+	ErrUserNotFound    = errors.New("can't find a user")
+	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidSignup   = errors.New("invalid name or password")
+)
 
-	err := req.ParseForm()
+func (s *AuthService) Login(name string, password string) (session string, err error) {
+	exists, err := s.Users.UserExist(name)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse form: %v", err)
-
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "bad form")
-		return
+		return "", fmt.Errorf("getting user:%v", err)
 	}
 
-	if req.Method == http.MethodPost {
-		form := req.Form
-		name := form.Get("name")
-		password := form.Get("password")
-		if !isNameValid(name) || !isPasswordValid(password) {
-			io.WriteString(w, htmlTemplateSignup)
-			io.WriteString(w, "wrong name or password")
-			return
-		}
-		t.Users.UserAdd(name, HashAndSalt(password))
-		http.Redirect(w, req, "/login", http.StatusSeeOther)
+	if !exists {
+		return "", ErrUserNotFound
 	}
+
+	hashedPassword, err := s.Users.UserGet(name)
+	if err != nil {
+		return "", fmt.Errorf("getting user's password:%v", err)
+	}
+
+	if !ComparePasswords(hashedPassword, password) {
+		return "", ErrInvalidPassword
+	}
+
+	return MakeSession(name), nil
 }
 
-func isNameValid(name string) bool {
+func (s *AuthService) Signup(name string, password string) (err error) {
+	if !IsNameValid(name) || !IsPasswordValid(password) {
+		return ErrInvalidSignup
+	}
+	hashedPassword, err := HashAndSalt(password)
+	if err != nil {
+		return fmt.Errorf("hashing user's password:%v", err)
+	}
+
+	s.Users.UserAdd(name, hashedPassword)
+	return nil
+}
+
+func IsNameValid(name string) bool {
 	return !regexp.MustCompile(`\s`).MatchString(name)
 }
 
-func isPasswordValid(password string) bool {
+func IsPasswordValid(password string) bool {
 	return (!regexp.MustCompile(`\s`).MatchString(password) || len(password) < 4)
 }
 
-func HashAndSalt(password string) string {
+func HashAndSalt(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
 	if err != nil {
-		fmt.Println("hashing password: ", err)
+		return "", fmt.Errorf("hashing password: %v", err)
 	}
-	return string(hash)
+	return string(hash), nil
 }
 
-func comparaPasswords(hashedPassword string, plainPassword string) bool {
+func MakeSession(name string) string {
+	return hex.EncodeToString([]byte(name + time.Now().GoString()))
+}
+
+func ComparePasswords(hashedPassword string, plainPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(plainPassword))
 	if err != nil {
 		fmt.Println("comparing passwords: ", err)
 		return false
 	}
 	return true
-}
-
-func (t *TxsController) setCookie(w *http.ResponseWriter, name string, password string) {
-	cookieValue := hex.EncodeToString([]byte(name + password + time.Now().GoString()))
-	cookie := http.Cookie{
-		Name:  "user",
-		Value: cookieValue,
-	}
-	t.Cookies[cookieValue] = true
-	http.SetCookie(*w, &cookie)
-
-	if err := cookie.Valid(); err != nil {
-		fmt.Println("cookie is not valid ", err)
-	}
 }

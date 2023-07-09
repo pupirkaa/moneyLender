@@ -1,11 +1,11 @@
 package ml
 
-import (
-	"fmt"
-	"net/http"
-	"os"
-	"strconv"
-)
+import "fmt"
+
+type TxsService struct {
+	Txs   TxsStorage
+	Users UsersStorage
+}
 
 type TransactionsAndDebts struct {
 	Transactions []Transaction
@@ -23,51 +23,24 @@ type Debt struct {
 	Money int
 }
 
-type TxsController struct {
-	Txs     TxsStorage
-	Users   UsersStorage
-	Cookies map[string]bool
-}
-
-func (t *TxsController) AddTransaction(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
+func (s *TxsService) TxAdd(lender string, lendee string, money int) error {
+	lenderExist, err := s.Users.UserExist(lender)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse form: %v", err)
-
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "bad form")
-		return
-	}
-	form := req.Form
-
-	var (
-		lender   = form.Get("lender")
-		lendee   = form.Get("lendee")
-		money, _ = strconv.Atoi(form.Get("money"))
-	)
-	if lender == "" || lendee == "" || money <= 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "bad form")
-		return
+		return fmt.Errorf("getting lender:%v", err)
 	}
 
-	lenderExist, err := t.Users.UserExist(lender)
+	lendeeExist, err := s.Users.UserExist(lendee)
 	if err != nil {
-		panic("TODO: handle error")
-	}
-
-	lendeeExist, err := t.Users.UserExist(lendee)
-	if err != nil {
-		panic("TODO: handle error")
+		return fmt.Errorf("getting lendee:%v", err)
 	}
 
 	if !lenderExist || !lendeeExist {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintln(w, "User not found")
-		return
+		return ErrUserNotFound
 	}
 
-	t.Txs.TransactionAdd(lender, lendee, money)
+	if err := s.Txs.TransactionAdd(lender, lendee, money); err != nil {
+		return fmt.Errorf("adding transaction:%v", err)
+	}
 
-	http.Redirect(w, req, "/", http.StatusSeeOther)
+	return nil
 }

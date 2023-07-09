@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	ml "main.go"
+	ml "github.com/pupirkaa/moneyLender"
 )
 
 type TxsFileStorage struct {

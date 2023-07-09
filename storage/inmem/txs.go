@@ -3,7 +3,7 @@ package inmem
 import (
 	"sort"
 
-	ml "main.go"
+	ml "github.com/pupirkaa/moneyLender"
 )
 
 type TxsStorage struct {

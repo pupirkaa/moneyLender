@@ -1,4 +1,4 @@
-module main.go
+module github.com/pupirkaa/moneyLender
 
 go 1.20
 

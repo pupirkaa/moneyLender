@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	ml "main.go"
+	ml "github.com/pupirkaa/moneyLender"
 )
 
 type TxsStorage struct {

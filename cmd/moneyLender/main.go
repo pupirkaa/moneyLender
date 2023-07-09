@@ -12,21 +12,30 @@ import (
 	"os/signal"
 	"path/filepath"
 
-	ml "main.go"
-	"main.go/fs"
-	"main.go/inmem"
-	"main.go/sqlite"
+	ml "github.com/pupirkaa/moneyLender"
+	"github.com/pupirkaa/moneyLender/api/html"
+	"github.com/pupirkaa/moneyLender/api/json"
+	"github.com/pupirkaa/moneyLender/storage/fs"
+	"github.com/pupirkaa/moneyLender/storage/inmem"
+	"github.com/pupirkaa/moneyLender/storage/sqlite"
 )
 
-func serveHttp(exitCh <-chan os.Signal, txc ml.TxsController) {
+func serveHttp(exitCh <-chan os.Signal, c html.Controller, jc json.Controller) {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/login", txc.Login)
-	mux.HandleFunc("/signup", txc.Signup)
+	mux.HandleFunc("/api/login", jc.Login)
+	mux.HandleFunc("/api/signup", jc.Signup)
+	mux.HandleFunc("/api/transaction", jc.AddTransaction)
+	mux.HandleFunc("/api/txs", jc.GetTxs)
+	mux.HandleFunc("/api/debts", jc.GetDebts)
+	mux.HandleFunc("/api/result", jc.GetDistributedDebts)
 
-	mux.HandleFunc("/", txc.Index)
-	mux.HandleFunc("/transaction", txc.AddTransaction)
-	mux.HandleFunc("/distributedDebts", txc.DistributedDebts)
+	mux.HandleFunc("/login", c.Login)
+	mux.HandleFunc("/signup", c.Signup)
+
+	mux.HandleFunc("/", c.Index)
+	mux.HandleFunc("/transaction", c.AddTransaction)
+	mux.HandleFunc("/distributedDebts", c.DistributedDebts)
 
 	srv := &http.Server{Addr: "0.0.0.0:80", Handler: mux}
 
@@ -34,8 +43,8 @@ func serveHttp(exitCh <-chan os.Signal, txc ml.TxsController) {
 		<-exitCh
 
 		fmt.Println("Выключаемся :(")
-		txc.Txs.Close()
-		txc.Users.Close()
+		c.TxsStorage.Close()
+		c.Auth.Users.Close()
 		srv.Shutdown(context.TODO())
 	}()
 
@@ -80,13 +89,27 @@ func main() {
 	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt)
 
-	txc := ml.TxsController{
-		Txs:     txs,
-		Users:   users,
-		Cookies: map[string]bool{},
+	txc := html.Controller{
+		TxsStorage: txs,
+		Auth: ml.AuthService{
+			Users: users,
+		},
+		Sessions: map[string]bool{},
 	}
 
-	serveHttp(exitCh, txc)
+	jc := json.Controller{
+		Auth: &ml.AuthService{
+			Users: users,
+		},
+		TxsStorage: txs,
+		Txs: ml.TxsService{
+			Users: users,
+			Txs:   txs,
+		},
+		Sessions: map[string]bool{},
+	}
+
+	serveHttp(exitCh, txc, jc)
 }
 
 const (

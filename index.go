@@ -3,12 +3,8 @@ package ml
 import (
 	_ "embed"
 	"fmt"
-	"html/template"
 	"io"
-	"net/http"
-	"os"
 	"sort"
-	"strings"
 )
 
 type UsersStorage interface {
@@ -25,63 +21,8 @@ type TxsStorage interface {
 	TxsGet() ([]Transaction, error)
 }
 
-//go:embed index.go.html
-var htmlTemplateMain string
-
-//go:embed distributedDebts.go.html
-var htmlTemplateDebts string
-
-func (t *TxsController) Index(w http.ResponseWriter, req *http.Request) {
-	cookie, err := req.Cookie("user")
-	if err != nil {
-		http.Redirect(w, req, "/login", http.StatusSeeOther)
-		return
-	}
-	if _, ok := t.Cookies[cookie.Value]; !ok {
-		http.Redirect(w, req, "/login", http.StatusSeeOther)
-		return
-	}
-
-	txs, _ := t.Txs.TxsGet()
-	debts, _ := t.Txs.DebtsGet()
-	io.WriteString(w, generateHTML(txs, debts, parseTemplate(htmlTemplateMain)))
-}
-
-func (t *TxsController) DistributedDebts(w http.ResponseWriter, req *http.Request) {
-	io.WriteString(w, generateHTML(t.DistributeDebts(), nil, parseTemplate(htmlTemplateDebts)))
-}
-
-func generateHTML(transactions []Transaction, debts []Debt, t *template.Template) string {
-	tad := TransactionsAndDebts{
-		Transactions: transactions,
-		Debts:        debts,
-	}
-	strB := strings.Builder{}
-
-	err := t.Execute(&strB, tad)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate html: %v", err)
-		os.Exit(1)
-	}
-
-	return strB.String()
-}
-
-func parseTemplate(s string) *template.Template {
-	t, err := template.New("webpage").Parse(s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
-func RunCookieStorage() map[string]bool {
-	return map[string]bool{}
-}
-
-func (t TxsController) DistributeDebts() []Transaction {
+func DistributeDebts(debts []Debt) []Transaction {
 	txs := []Transaction{}
-	debts, _ := t.Txs.DebtsGet()
 	posDebts := []Debt{}
 	negDebts := []Debt{}
 
