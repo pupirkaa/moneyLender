@@ -13,7 +13,6 @@ import (
 
 type TxsFileStorage struct {
 	txs         []ml.Transaction
-	newTxs      []ml.Transaction
 	debts       map[string]int
 	sortedDebts []ml.Debt
 	path        string
@@ -24,7 +23,6 @@ type TxsFileStorage struct {
 func NewTxsStorage(path string) (tfs *TxsFileStorage) {
 	tfs = &TxsFileStorage{
 		txs:        parseTransactions(readFile(path)),
-		newTxs:     []ml.Transaction{},
 		path:       path,
 		exitCh:     make(chan bool),
 		syncDoneCh: make(chan bool),
@@ -33,7 +31,7 @@ func NewTxsStorage(path string) (tfs *TxsFileStorage) {
 	tfs.sortedDebts = sortDebts(tfs.debts)
 
 	go func() {
-		t := time.NewTicker(5 * time.Second)
+		t := time.NewTicker(1 * time.Minute)
 		for {
 			select {
 			case <-tfs.exitCh:
@@ -58,7 +56,6 @@ func (tfs TxsFileStorage) TxsGet() ([]ml.Transaction, error) {
 
 func (tfs *TxsFileStorage) TransactionAdd(lender string, lendee string, money int) error {
 	tfs.txs = append(tfs.txs, ml.Transaction{Lender: lender, Lendee: lendee, Money: money})
-	tfs.newTxs = append(tfs.newTxs, ml.Transaction{Lender: lender, Lendee: lendee, Money: money})
 	tfs.debtAdd(lender, lendee, money)
 	return nil
 }
@@ -82,6 +79,7 @@ func (tfs TxsFileStorage) saveTxsToFile() {
 		os.Exit(1)
 	}
 	defer f.Close()
+	fmt.Println(tfs.txs)
 	for _, t := range tfs.txs {
 		_, err = f.WriteString(fmt.Sprintf("%s lent %v$ to %s\n", t.Lender, t.Money, t.Lendee))
 		if err != nil {

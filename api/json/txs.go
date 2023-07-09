@@ -71,7 +71,7 @@ func (c *Controller) GetTxs(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
 	}
 
-	if _, ok := c.Sessions[body.Session]; !ok {
+	if _, ok := c.Sessions.SessionExist(body.Session); !ok {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -119,7 +119,7 @@ func (c *Controller) GetDebts(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
 	}
 
-	if _, ok := c.Sessions[body.Session]; !ok {
+	if _, ok := c.Sessions.SessionExist(body.Session); !ok {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -166,7 +166,7 @@ func (c *Controller) GetDistributedDebts(w http.ResponseWriter, req *http.Reques
 		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
 	}
 
-	if _, ok := c.Sessions[body.Session]; !ok {
+	if _, ok := c.Sessions.SessionExist(body.Session); !ok {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}

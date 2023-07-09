@@ -21,6 +21,13 @@ type TxsStorage interface {
 	TxsGet() ([]Transaction, error)
 }
 
+type SessionsStorage interface {
+	io.Closer
+	SessionExist(session string) (error, bool)
+	AddSession(session string) error
+	DeleteSession(session string) error
+}
+
 func DistributeDebts(debts []Debt) []Transaction {
 	txs := []Transaction{}
 	posDebts := []Debt{}

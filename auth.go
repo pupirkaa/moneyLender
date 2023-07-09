@@ -12,7 +12,8 @@ import (
 )
 
 type AuthService struct {
-	Users UsersStorage
+	Users    UsersStorage
+	Sessions SessionsStorage
 }
 
 var (
@@ -53,6 +54,11 @@ func (s *AuthService) Signup(name string, password string) (err error) {
 	}
 
 	s.Users.UserAdd(name, hashedPassword)
+	return nil
+}
+
+func (s *AuthService) Logout(session string) error {
+	s.Sessions.DeleteSession(session)
 	return nil
 }
 

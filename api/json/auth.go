@@ -15,7 +15,7 @@ type Controller struct {
 	Auth       *ml.AuthService
 	TxsStorage ml.TxsStorage
 	Txs        ml.TxsService
-	Sessions   map[string]bool
+	Sessions   ml.SessionsStorage
 }
 
 func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
@@ -57,7 +57,7 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(os.Stderr, "Login failed: %v\n", err)
 	}
 
-	c.Sessions[session] = true
+	c.Sessions.AddSession(session)
 	resp, err := json.Marshal(map[string]string{"session": session, "name": body.Name})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,4 +107,37 @@ func (c *Controller) Signup(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (c *Controller) Logout(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	rawBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse body: %v", err)
+
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "bad form")
+		return
+	}
+	var body struct {
+		Session string
+	}
+
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
+		return
+	}
+
+	if err := c.Auth.Logout(body.Session); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(os.Stderr, "Failed to logout: %v\n", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

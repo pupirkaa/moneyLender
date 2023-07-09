@@ -22,7 +22,7 @@ type Controller struct {
 	Txs        ml.TxsService
 	TxsStorage ml.TxsStorage
 	Auth       ml.AuthService
-	Sessions   map[string]bool
+	Sessions   ml.SessionsStorage
 }
 
 func (t *Controller) Index(w http.ResponseWriter, req *http.Request) {
@@ -31,7 +31,7 @@ func (t *Controller) Index(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 		return
 	}
-	if _, ok := t.Sessions[cookie.Value]; !ok {
+	if _, ok := t.Sessions.SessionExist(cookie.Value); !ok {
 		http.Redirect(w, req, "/login", http.StatusSeeOther)
 		return
 	}

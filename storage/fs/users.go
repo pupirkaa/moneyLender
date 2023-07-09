@@ -10,7 +10,6 @@ import (
 
 type UserFileStorage struct {
 	users      map[string]string
-	newUsers   map[string]string
 	path       string
 	exitCh     chan bool
 	syncDoneCh chan bool
@@ -18,7 +17,6 @@ type UserFileStorage struct {
 
 func NewUserStorage(path string) (usf UserFileStorage) {
 	usf.users = parseUsers(readFile(path))
-	usf.newUsers = make(map[string]string)
 	usf.path = path
 	usf.exitCh = make(chan bool)
 	usf.syncDoneCh = make(chan bool)
@@ -52,7 +50,6 @@ func (usf UserFileStorage) UserExist(name string) (bool, error) {
 
 func (usf UserFileStorage) UserAdd(name string, password string) error {
 	usf.users[name] = password
-	usf.newUsers[name] = password
 	return nil
 }
 
@@ -61,14 +58,13 @@ func (usf UserFileStorage) UserGet(name string) (string, error) {
 }
 
 func (usf UserFileStorage) SaveUsersToFile() {
-	f, err := os.OpenFile(usf.path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	f, err := os.Create(usf.path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to open file: %v", err)
 		os.Exit(1)
 	}
-	for k := range usf.newUsers {
-		_, err = f.WriteString(fmt.Sprintf("\n%v,%v", k, usf.newUsers[k]))
-		delete(usf.newUsers, k)
+	for k := range usf.users {
+		_, err = f.WriteString(fmt.Sprintf("\n%v,%v", k, usf.users[k]))
 		if err != nil {
 			fmt.Println(err)
 		}

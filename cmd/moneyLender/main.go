@@ -25,6 +25,7 @@ func serveHttp(exitCh <-chan os.Signal, c html.Controller, jc json.Controller) {
 
 	mux.HandleFunc("/api/login", jc.Login)
 	mux.HandleFunc("/api/signup", jc.Signup)
+	mux.HandleFunc("/api/logout", jc.Logout)
 	mux.HandleFunc("/api/transaction", jc.AddTransaction)
 	mux.HandleFunc("/api/txs", jc.GetTxs)
 	mux.HandleFunc("/api/debts", jc.GetDebts)
@@ -32,6 +33,7 @@ func serveHttp(exitCh <-chan os.Signal, c html.Controller, jc json.Controller) {
 
 	mux.HandleFunc("/login", c.Login)
 	mux.HandleFunc("/signup", c.Signup)
+	mux.HandleFunc("/logout", c.Logout)
 
 	mux.HandleFunc("/", c.Index)
 	mux.HandleFunc("/transaction", c.AddTransaction)
@@ -83,33 +85,40 @@ func main() {
 	case "sqlite":
 		users = sqlite.NewUserStorage(*sqliteFlag)
 		txs = sqlite.NewTxsStorage(*sqliteFlag)
-
 	}
+
+	sessions := sqlite.NewSessionsStorage("fixtures/us.db")
 
 	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt)
 
-	txc := html.Controller{
+	hc := html.Controller{
 		TxsStorage: txs,
 		Auth: ml.AuthService{
-			Users: users,
+			Users:    users,
+			Sessions: &sessions,
 		},
-		Sessions: map[string]bool{},
+		Txs: ml.TxsService{
+			Users: users,
+			Txs:   txs,
+		},
+		Sessions: &sessions,
 	}
 
 	jc := json.Controller{
 		Auth: &ml.AuthService{
-			Users: users,
+			Users:    users,
+			Sessions: &sessions,
 		},
 		TxsStorage: txs,
 		Txs: ml.TxsService{
 			Users: users,
 			Txs:   txs,
 		},
-		Sessions: map[string]bool{},
+		Sessions: &sessions,
 	}
 
-	serveHttp(exitCh, txc, jc)
+	serveHttp(exitCh, hc, jc)
 }
 
 const (
