@@ -57,7 +57,6 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(os.Stderr, "Login failed: %v\n", err)
 	}
 
-	c.Sessions.AddSession(session)
 	resp, err := json.Marshal(map[string]string{"session": session, "name": body.Name})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

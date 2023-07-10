@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 )
 
 //go:embed htmlTemplates/login.go.html
@@ -42,10 +43,10 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		c.Sessions.AddSession(session)
 		err = c.setCookie(w, &http.Cookie{
-			Name:  "user",
-			Value: session,
+			Name:    "user",
+			Value:   session,
+			Expires: time.Now().Add(24 * time.Hour),
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "setting cookie: %v\n", err)

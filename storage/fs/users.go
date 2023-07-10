@@ -64,7 +64,7 @@ func (usf UserFileStorage) SaveUsersToFile() {
 		os.Exit(1)
 	}
 	for k := range usf.users {
-		_, err = f.WriteString(fmt.Sprintf("\n%v,%v", k, usf.users[k]))
+		_, err = f.WriteString(fmt.Sprintf("%v,%v\n", k, usf.users[k]))
 		if err != nil {
 			fmt.Println(err)
 		}

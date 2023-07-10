@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"time"
 )
 
 type UsersStorage interface {
@@ -24,8 +25,9 @@ type TxsStorage interface {
 type SessionsStorage interface {
 	io.Closer
 	SessionExist(session string) (error, bool)
-	AddSession(session string) error
+	AddSession(session string, name string, creationDate time.Time) error
 	DeleteSession(session string) error
+	GetSessions() (map[string]SessionArgs, error)
 }
 
 func DistributeDebts(debts []Debt) []Transaction {

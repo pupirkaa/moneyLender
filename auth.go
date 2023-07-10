@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -16,11 +17,44 @@ type AuthService struct {
 	Sessions SessionsStorage
 }
 
+type SessionArgs struct {
+	Name         string
+	CreationDate time.Time
+}
+
 var (
 	ErrUserNotFound    = errors.New("can't find a user")
 	ErrInvalidPassword = errors.New("invalid password")
 	ErrInvalidSignup   = errors.New("invalid name or password")
 )
+
+func NewAuthServise(users UsersStorage, sessions SessionsStorage, exCh <-chan os.Signal) (as AuthService) {
+	as = AuthService{
+		Users:    users,
+		Sessions: sessions,
+	}
+	go func() {
+		t := time.NewTicker(10 * time.Minute)
+		for {
+			select {
+			case <-exCh:
+				return
+			case <-t.C:
+			}
+			allSessions, err := as.Sessions.GetSessions()
+			if err != nil {
+				fmt.Println("failed to get sessions")
+			}
+			for s, a := range allSessions {
+				if time.Now().After(a.CreationDate.Add(1 * time.Hour)) {
+					as.Sessions.DeleteSession(s)
+				}
+			}
+		}
+	}()
+
+	return as
+}
 
 func (s *AuthService) Login(name string, password string) (session string, err error) {
 	exists, err := s.Users.UserExist(name)
@@ -41,7 +75,14 @@ func (s *AuthService) Login(name string, password string) (session string, err e
 		return "", ErrInvalidPassword
 	}
 
-	return MakeSession(name), nil
+	session = MakeSession(name)
+	/*go func() {
+		t := time.NewTicker(2 * time.Minute)
+		<-t.C
+		s.Sessions.DeleteSession(session)
+	}()*/
+	s.Sessions.AddSession(session, name, time.Now())
+	return session, nil
 }
 
 func (s *AuthService) Signup(name string, password string) (err error) {

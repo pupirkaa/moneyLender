@@ -47,6 +47,7 @@ func serveHttp(exitCh <-chan os.Signal, c html.Controller, jc json.Controller) {
 		fmt.Println("Выключаемся :(")
 		c.TxsStorage.Close()
 		c.Auth.Users.Close()
+		c.Auth.Sessions.Close()
 		srv.Shutdown(context.TODO())
 	}()
 
@@ -63,62 +64,63 @@ func main() {
 	_ = mime.TypeByExtension(filepath.Ext(""))
 
 	var (
-		storageFlag = flag.String("storage", "", "kind of storage")
-		sqliteFlag  = flag.String("sqlite", "", "path to file for db storage")
-		usersFlag   = flag.String("users", "", "path to file for user storage")
-		txsFlag     = flag.String("txs", "", "path to file for transactions storage")
+		storageFlag  = flag.String("storage", "", "kind of storage")
+		sqliteFlag   = flag.String("sqlite", "", "path to file for db storage")
+		usersFlag    = flag.String("users", "", "path to file for user storage")
+		txsFlag      = flag.String("txs", "", "path to file for transactions storage")
+		sessionsFlag = flag.String("sessions", "", "path to file for session storage")
 	)
 	flag.Parse()
 
 	var (
-		users ml.UsersStorage
-		txs   ml.TxsStorage
+		users    ml.UsersStorage
+		txs      ml.TxsStorage
+		sessions ml.SessionsStorage
 	)
 
 	switch *storageFlag {
 	case "inmem":
 		users = inmem.NewUserStorage()
 		txs = inmem.NewTxsStorage()
+		sessions = inmem.NewSessionsStorage()
 	case "fs":
 		users = fs.NewUserStorage(*usersFlag)
 		txs = fs.NewTxsStorage(*txsFlag)
+		sessions = fs.NewSessionsStorage(*sessionsFlag)
 	case "sqlite":
 		users = sqlite.NewUserStorage(*sqliteFlag)
 		txs = sqlite.NewTxsStorage(*sqliteFlag)
+		sessions = sqlite.NewSessionsStorage(*sqliteFlag)
 	}
-
-	sessions := sqlite.NewSessionsStorage("fixtures/us.db")
 
 	exitCh := make(chan os.Signal, 1)
 	signal.Notify(exitCh, os.Interrupt)
 
 	hc := html.Controller{
 		TxsStorage: txs,
-		Auth: ml.AuthService{
-			Users:    users,
-			Sessions: &sessions,
-		},
+		Auth:       ml.NewAuthServise(users, sessions, exitCh),
 		Txs: ml.TxsService{
 			Users: users,
 			Txs:   txs,
 		},
-		Sessions: &sessions,
+		Sessions: sessions,
 	}
 
 	jc := json.Controller{
 		Auth: &ml.AuthService{
 			Users:    users,
-			Sessions: &sessions,
+			Sessions: sessions,
 		},
 		TxsStorage: txs,
 		Txs: ml.TxsService{
 			Users: users,
 			Txs:   txs,
 		},
-		Sessions: &sessions,
+		Sessions: sessions,
 	}
 
 	serveHttp(exitCh, hc, jc)
+
 }
 
 const (
