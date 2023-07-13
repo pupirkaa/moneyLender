@@ -2,11 +2,14 @@ package html
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	ml "github.com/pupirkaa/moneyLender"
 )
 
 //go:embed htmlTemplates/login.go.html
@@ -38,9 +41,19 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 		)
 
 		session, err := c.Auth.Login(name, password)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "logging in: %v\n", err)
-			return
+		switch {
+		case err == nil:
+			//continue
+		case errors.Is(err, ml.ErrUserNotFound):
+			io.WriteString(w, htmlTemplateLogin)
+			io.WriteString(w, "User not found")
+		case errors.Is(err, ml.ErrInvalidPassword):
+			io.WriteString(w, htmlTemplateLogin)
+			io.WriteString(w, "Invalid password")
+		default:
+			fmt.Fprintf(os.Stderr, "failed to login: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, "Server error. Reload the page")
 		}
 
 		err = c.setCookie(w, &http.Cookie{
@@ -80,9 +93,16 @@ func (c *Controller) Signup(w http.ResponseWriter, req *http.Request) {
 		password := form.Get("password")
 
 		err := c.Auth.Signup(name, password)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "signing up: %v\n", err)
-			return
+		switch {
+		case err == nil:
+			//continue
+		case errors.Is(err, ml.ErrInvalidSignup):
+			io.WriteString(w, htmlTemplateSignup)
+			io.WriteString(w, "Invalid data")
+		default:
+			fmt.Fprintf(os.Stderr, "failed to signup: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, "Server error. Reload the page")
 		}
 
 		http.Redirect(w, req, "/login", http.StatusSeeOther)

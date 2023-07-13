@@ -76,11 +76,6 @@ func (s *AuthService) Login(name string, password string) (session string, err e
 	}
 
 	session = MakeSession(name)
-	/*go func() {
-		t := time.NewTicker(2 * time.Minute)
-		<-t.C
-		s.Sessions.DeleteSession(session)
-	}()*/
 	s.Sessions.AddSession(session, name, time.Now())
 	return session, nil
 }

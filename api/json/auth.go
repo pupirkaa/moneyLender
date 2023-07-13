@@ -43,24 +43,22 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 	}
 
 	session, err := c.Auth.Login(body.Name, body.Password)
+
+	var resp []byte
+
 	switch {
 	case err == nil:
-		//continue
+		resp, _ = json.Marshal(map[string]string{"session": session, "name": body.Name})
 	case errors.Is(err, ml.ErrInvalidPassword):
+		resp, _ = json.Marshal(map[string]string{"error": "wrong name or password"})
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, "wrong name or password")
 	case errors.Is(err, ml.ErrUserNotFound):
+		resp, _ = json.Marshal(map[string]string{"error": "wrong name or password"})
 		w.WriteHeader(http.StatusNotFound)
-		io.WriteString(w, "wrong name or password")
 	default:
+		resp, _ = json.Marshal(map[string]string{"error": "Internal server error"})
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(os.Stderr, "Login failed: %v\n", err)
-	}
-
-	resp, err := json.Marshal(map[string]string{"session": session, "name": body.Name})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(os.Stderr, "Failed to marshal: %v\n", err)
 	}
 
 	_, err = w.Write(resp)
@@ -94,15 +92,23 @@ func (c *Controller) Signup(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = c.Auth.Signup(body.Name, body.Password)
+
+	var resp []byte
 	switch {
 	case err == nil:
 		//continue
 	case errors.Is(err, ml.ErrInvalidSignup):
 		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "invalid name or password")
+		resp, _ = json.Marshal(map[string]string{"error": "invalid name or password"})
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
+		resp, _ = json.Marshal(map[string]string{"error": "Internal server error"})
 		fmt.Fprintf(os.Stderr, "Signup failed: %v\n", err)
+	}
+	_, err = w.Write(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(os.Stderr, "Failed to write: %v\n", err)
 	}
 
 	w.WriteHeader(http.StatusCreated)
