@@ -1,2 +1,3 @@
 *.session.sql
 .vscode
+.fixtures
