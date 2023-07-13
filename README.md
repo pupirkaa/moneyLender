@@ -9,5 +9,5 @@ There are few flags you should set to run programm correctly:
 * -storage - use that to choice type of storage: inmem(in memory), fs(in file), sqlite (in sqlite db). 
 * -users, -sessions, -txs - flags for file storage with path to files with users, sessions and transactions. 
 * -sqlite - flag for sqlite storage with path to file with db
- 
-  Use `go run .` + flags to run the program or `go build` to build the program binary.
+
+Use `go run .` + flags to run the program or `go build` to build the program binary.
