@@ -12,6 +12,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Комментарий:
+// Auth сервис интересный, но не бесспорный. Я бы разделил. Добавил бы папку internal в нее service/service.go.
+// Там прописал бы логику для аутентификации. Затем эту логику подключал бы в app.go который в корне internal
 type AuthService struct {
 	Users    UsersStorage
 	Sessions SessionsStorage

@@ -39,6 +39,11 @@ func serveHttp(exitCh <-chan os.Signal, c html.Controller, jc json.Controller) {
 	mux.HandleFunc("/transaction", c.AddTransaction)
 	mux.HandleFunc("/distributedDebts", c.DistributedDebts)
 
+	mux.HandleFunc("/chats", c.ViewChatList)
+	mux.HandleFunc("/chat1", c.UseChat)
+	mux.HandleFunc("/message", c.AddMessage)
+	mux.HandleFunc("/update", c.UpdateMesages)
+
 	srv := &http.Server{Addr: "0.0.0.0:80", Handler: mux}
 
 	go func() {
@@ -78,6 +83,9 @@ func main() {
 		sessions ml.SessionsStorage
 	)
 
+	//TODO:
+	// Сделать дефолт или выводить, что флаг неверный
+
 	switch *storageFlag {
 	case "inmem":
 		users = inmem.NewUserStorage()
@@ -104,7 +112,10 @@ func main() {
 			Txs:   txs,
 		},
 		Sessions: sessions,
+		Chat:     sqlite.NewChatsStorage("fixtures/us.db"),
+		//Chat: &inmem.ChatsStorage{},
 	}
+	//hc.Chat.AddChat(*ml.NewChat("Sima", []string{"Irina"}))
 
 	jc := json.Controller{
 		Auth: &ml.AuthService{

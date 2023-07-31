@@ -23,6 +23,7 @@ type Controller struct {
 	TxsStorage ml.TxsStorage
 	Auth       ml.AuthService
 	Sessions   ml.SessionsStorage
+	Chat       ml.ChatStorage
 }
 
 func (t *Controller) Index(w http.ResponseWriter, req *http.Request) {

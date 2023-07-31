@@ -1,0 +1,32 @@
+{{define "Full"}}
+<!DOCTYPE html>
+<html>
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+	<head>
+		<meta charset="UTF-8">
+		<title>Chats list</title>
+	</head>
+	<body>
+        <a href ="/chats"> Back to chat list</a>
+        <h1>Chat 1</h1>
+        <div id="chat"
+            hx-trigger="every 1s" hx-get="/update" hx-sync="this:drop"
+            hx-vals="js:{lastMessageId: (document.querySelector('#chat p:last-child') || {}).id || ''}"
+            hx-swap="beforeend">
+            {{template "Part"}}
+        </div>
+        <form hx-post="/message" hx-target="#chat" hx-swap="beforeend"
+            hx-vals="js:{lastMessageId: (document.querySelector('#chat p:last-child') || {}).id || ''}"
+            hx-on::after-request="this.reset()">
+			<lable for="message">Message</lable><br>
+			<input type="text" id="message" name="message" required ><br>
+			<input type="submit" value="Send">
+		</form>
+	</body>
+</html>
+{{end}}
+{{define "Part" -}}
+{{range . -}}
+    <p id="{{.Id}}">{{.Sender}}, {{.Time}}: {{.Message}}</p>
+{{end}}
+{{- end}}

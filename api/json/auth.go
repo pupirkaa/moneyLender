@@ -40,6 +40,7 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 	if err := json.Unmarshal(rawBody, &body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
+		return
 	}
 
 	session, err := c.Auth.Login(body.Name, body.Password)
@@ -63,8 +64,8 @@ func (c *Controller) Login(w http.ResponseWriter, req *http.Request) {
 
 	_, err = w.Write(resp)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(os.Stderr, "Failed to write: %v\n", err)
+		return
 	}
 }
 
@@ -89,6 +90,7 @@ func (c *Controller) Signup(w http.ResponseWriter, req *http.Request) {
 	if err := json.Unmarshal(rawBody, &body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(os.Stderr, "Invalid request: %v\n", err)
+		return
 	}
 
 	err = c.Auth.Signup(body.Name, body.Password)
@@ -107,8 +109,8 @@ func (c *Controller) Signup(w http.ResponseWriter, req *http.Request) {
 	}
 	_, err = w.Write(resp)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(os.Stderr, "Failed to write: %v\n", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
